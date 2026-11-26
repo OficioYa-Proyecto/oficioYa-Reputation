@@ -62,6 +62,12 @@ public class ResenaController {
         return resenaService.resenasDeTrabajador(trabajadorId);
     }
 
+    @Operation(summary = "Reseñas que los trabajadores le escribieron a un contratante")
+    @GetMapping("/contratantes/{contratanteId}/resenas")
+    public List<ResenaResponse> resenasDeContratante(@PathVariable UUID contratanteId) {
+        return resenaService.resenasDeContratante(contratanteId);
+    }
+
     @Operation(summary = "Reportar una reseña falsa o inapropiada")
     @PostMapping("/resenas/{codigo}/reportes")
     @ResponseStatus(HttpStatus.CREATED)

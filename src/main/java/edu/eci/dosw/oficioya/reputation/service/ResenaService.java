@@ -95,6 +95,18 @@ public class ResenaService {
                 .orElse(List.of());
     }
 
+    /**
+     * Reseñas visibles que los trabajadores le escribieron a un contratante, de la más reciente a la más antigua.
+     * Es la otra cara del perfil: cómo califican los trabajadores a esa persona cuando ella contrata.
+     */
+    @Transactional(readOnly = true)
+    public List<ResenaResponse> resenasDeContratante(UUID contratanteId) {
+        return resenaRepository
+                .findByCalificadoIdAndTipoCalificadoAndVisibleTrueOrderByFechaCreacionDescIdDesc(
+                        contratanteId, TipoParte.CONTRATANTE)
+                .stream().map(ResenaResponse::desde).toList();
+    }
+
     /** RNF-04: una reseña se puede rastrear por su código único hasta el servicio que la originó. */
     @Transactional(readOnly = true)
     public ResenaResponse obtenerPorCodigo(UUID codigo) {

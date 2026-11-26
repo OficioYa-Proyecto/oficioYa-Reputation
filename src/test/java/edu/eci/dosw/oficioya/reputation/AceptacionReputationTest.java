@@ -151,6 +151,7 @@ class AceptacionReputationTest {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.solicitudId").value(solicitud.toString()))
                 .andExpect(jsonPath("$.tipoAutor").value("CONTRATANTE"))
+                .andExpect(jsonPath("$.autorId").value(contratante.toString()))
                 .andExpect(jsonPath("$.calificadoId").value(trabajador.toString()))
                 .andExpect(jsonPath("$.codigo").isNotEmpty())
                 .andReturn().getResponse().getContentAsString();
@@ -213,7 +214,9 @@ class AceptacionReputationTest {
         mvc.perform(get(BASE + "/trabajadores/" + trabajador + "/resenas").with(usuario(contratante, "ROLE_CONTRATANTE")))
                 .andExpect(jsonPath("$.length()").value(3))
                 .andExpect(jsonPath("$[0].puntuacion").value(3))
-                .andExpect(jsonPath("$[0].autorId").doesNotExist());
+                // La reseña queda vinculada a la cuenta de quien la escribió (el front muestra su nombre y foto).
+                .andExpect(jsonPath("$[0].autorId").value(contratante.toString()))
+                .andExpect(jsonPath("$[0].correo").doesNotExist());
 
         // No existe forma de editar ni borrar una reseña.
         mvc.perform(delete(BASE + "/resenas/" + primera).with(usuario(contratante, "ROLE_CONTRATANTE")))

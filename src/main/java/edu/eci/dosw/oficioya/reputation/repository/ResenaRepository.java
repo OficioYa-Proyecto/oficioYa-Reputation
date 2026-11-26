@@ -8,6 +8,7 @@ import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import edu.eci.dosw.oficioya.reputation.domain.Resena;
+import edu.eci.dosw.oficioya.reputation.domain.TipoParte;
 
 public interface ResenaRepository extends JpaRepository<Resena, Integer> {
 
@@ -15,6 +16,10 @@ public interface ResenaRepository extends JpaRepository<Resena, Integer> {
 
     /** Reseñas visibles de una reputación, de la más reciente a la más antigua. */
     List<Resena> findByReputacionIdAndVisibleTrueOrderByFechaCreacionDescIdDesc(Integer reputacionId);
+
+    /** Reseñas visibles que recibió una cuenta en un rol (por ejemplo, como contratante). */
+    List<Resena> findByCalificadoIdAndTipoCalificadoAndVisibleTrueOrderByFechaCreacionDescIdDesc(
+            UUID calificadoId, TipoParte tipoCalificado);
 
     List<Resena> findByVisibleTrueAndFechaCreacionBetween(LocalDateTime inicio, LocalDateTime fin);
 }

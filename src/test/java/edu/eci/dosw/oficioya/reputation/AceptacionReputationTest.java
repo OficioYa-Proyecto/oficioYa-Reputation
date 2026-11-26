@@ -169,6 +169,27 @@ class AceptacionReputationTest {
     }
 
     @Test
+    void lasResenasQueRecibeUnContratanteSeListanEnSuPropiaRuta() throws Exception {
+        UUID solicitud = nuevoId();
+        servicioCumplido(solicitud, trabajador, contratante).andExpect(status().isOk());
+        calificar(contratante, "ROLE_CONTRATANTE", solicitud, 5).andExpect(status().isCreated());
+        calificar(trabajador, "ROLE_TRABAJADOR", solicitud, 4).andExpect(status().isCreated());
+
+        mvc.perform(get(BASE + "/contratantes/" + contratante + "/resenas")
+                        .with(usuario(trabajador, "ROLE_TRABAJADOR")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].autorId").value(trabajador.toString()))
+                .andExpect(jsonPath("$[0].tipoCalificado").value("CONTRATANTE"))
+                .andExpect(jsonPath("$[0].calificadoId").value(contratante.toString()))
+                .andExpect(jsonPath("$[0].puntuacion").value(4));
+        // Las que recibió el trabajador siguen en su propia lista.
+        mvc.perform(get(BASE + "/trabajadores/" + trabajador + "/resenas").with(usuario(contratante, "ROLE_CONTRATANTE")))
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].tipoCalificado").value("TRABAJADOR"));
+    }
+
+    @Test
     void elAvisoDeServicioCumplidoEsIdempotente() throws Exception {
         UUID solicitud = nuevoId();
         servicioCumplido(solicitud, trabajador, contratante).andExpect(status().isOk());

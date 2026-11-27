@@ -4,7 +4,9 @@ import java.util.UUID;
 
 import java.time.LocalDateTime;
 import java.util.Collection;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.hibernate.Hibernate;
 import org.slf4j.Logger;
@@ -31,6 +33,7 @@ import edu.eci.dosw.oficioya.reputation.repository.PenalizacionRepository;
 import edu.eci.dosw.oficioya.reputation.repository.ReputacionContratanteRepository;
 import edu.eci.dosw.oficioya.reputation.repository.ReputacionTrabajadorRepository;
 import edu.eci.dosw.oficioya.reputation.repository.ResenaRepository;
+import edu.eci.dosw.oficioya.reputation.repository.ServicioCalificableRepository;
 
 /**
  * Casos de uso de la reputación: recálculo del promedio, pausado automático, penalizaciones,
@@ -47,6 +50,7 @@ public class ReputacionService {
     private final ReputacionContratanteRepository reputacionContratanteRepository;
     private final ResenaRepository resenaRepository;
     private final PenalizacionRepository penalizacionRepository;
+    private final ServicioCalificableRepository servicioRepository;
     private final ReglasReputacion reglas;
     private final OrquestadorClient orquestador;
 
@@ -54,12 +58,14 @@ public class ReputacionService {
                              ReputacionContratanteRepository reputacionContratanteRepository,
                              ResenaRepository resenaRepository,
                              PenalizacionRepository penalizacionRepository,
+                             ServicioCalificableRepository servicioRepository,
                              ReglasReputacion reglas,
                              OrquestadorClient orquestador) {
         this.reputacionTrabajadorRepository = reputacionTrabajadorRepository;
         this.reputacionContratanteRepository = reputacionContratanteRepository;
         this.resenaRepository = resenaRepository;
         this.penalizacionRepository = penalizacionRepository;
+        this.servicioRepository = servicioRepository;
         this.reglas = reglas;
         this.orquestador = orquestador;
     }
@@ -141,15 +147,26 @@ public class ReputacionService {
                 .orElseGet(() -> new ReputacionContratanteResponse(contratanteId, 0, 0));
     }
 
-    /** Reputación de varios trabajadores a la vez (la consume Search). Los que no tienen reputación se omiten. */
+    /**
+     * Reputación y servicios cumplidos de varios trabajadores a la vez (la consume Search). Se omiten los que no
+     * tienen reseñas ni servicios cumplidos.
+     */
     @Transactional(readOnly = true)
     public List<ReputacionResumenResponse> consultarResumen(Collection<UUID> trabajadorIds) {
         if (trabajadorIds == null || trabajadorIds.isEmpty()) {
             return List.of();
         }
-        return reputacionTrabajadorRepository.findByTrabajadorIdIn(trabajadorIds).stream()
-                .map(r -> new ReputacionResumenResponse(r.getTrabajadorId(), r.valorReputacion(), r.getTotalResenas()))
-                .toList();
+        Map<UUID, Integer> cumplidos = new LinkedHashMap<>();
+        for (Object[] fila : servicioRepository.contarCumplidosPorTrabajador(trabajadorIds)) {
+            cumplidos.put((UUID) fila[0], ((Number) fila[1]).intValue());
+        }
+        Map<UUID, ReputacionResumenResponse> resumen = new LinkedHashMap<>();
+        for (ReputacionTrabajador r : reputacionTrabajadorRepository.findByTrabajadorIdIn(trabajadorIds)) {
+            resumen.put(r.getTrabajadorId(), new ReputacionResumenResponse(r.getTrabajadorId(), r.valorReputacion(),
+                    r.getTotalResenas(), cumplidos.getOrDefault(r.getTrabajadorId(), 0)));
+        }
+        cumplidos.forEach((id, total) -> resumen.putIfAbsent(id, new ReputacionResumenResponse(id, 0, 0, total)));
+        return List.copyOf(resumen.values());
     }
 
     /**

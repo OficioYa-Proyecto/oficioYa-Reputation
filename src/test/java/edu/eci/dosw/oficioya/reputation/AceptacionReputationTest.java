@@ -466,7 +466,17 @@ class AceptacionReputationTest {
                 ((Number) JsonPath.read(json, "$.calificacionPromedio")).doubleValue(),
                 ((Number) JsonPath.read(json, "$.resenasReportadas")).longValue(),
                 ((Number) JsonPath.read(json, "$.reportesPendientes")).longValue(),
-                ((Number) JsonPath.read(json, "$.reportesResueltos")).longValue());
+                ((Number) JsonPath.read(json, "$.reportesResueltos")).longValue(),
+                ((Number) JsonPath.read(json, "$.trabajadoresPausados")).longValue());
+    }
+
+    @Test
+    void reportingVeCuantosTrabajadoresEstanPausados() throws Exception {
+        long antes = estadisticasDeHoy().trabajadoresPausados();
+        for (int i = 0; i < 5; i++) {
+            contratanteCalifica(1);
+        }
+        assertThat(estadisticasDeHoy().trabajadoresPausados()).isEqualTo(antes + 1);
     }
 
     @Test

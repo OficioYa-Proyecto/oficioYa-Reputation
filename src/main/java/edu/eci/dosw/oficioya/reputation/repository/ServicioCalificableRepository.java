@@ -16,6 +16,8 @@ public interface ServicioCalificableRepository extends JpaRepository<ServicioCal
 
     Optional<ServicioCalificable> findBySolicitudId(UUID solicitudId);
 
+    List<ServicioCalificable> findByFechaCumplidaBetween(java.time.LocalDateTime inicio, java.time.LocalDateTime fin);
+
     /** Servicios cumplidos (avisados por Service) de cada trabajador: filas {trabajadorId, total}. */
     @Query("select s.trabajadorId, count(s) from ServicioCalificable s where s.trabajadorId in :ids group by s.trabajadorId")
     List<Object[]> contarCumplidosPorTrabajador(@Param("ids") Collection<UUID> trabajadorIds);

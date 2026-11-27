@@ -468,7 +468,7 @@ class AceptacionReputationTest {
                 ((Number) JsonPath.read(json, "$.resenasReportadas")).longValue(),
                 ((Number) JsonPath.read(json, "$.reportesPendientes")).longValue(),
                 ((Number) JsonPath.read(json, "$.reportesResueltos")).longValue(),
-                ((Number) JsonPath.read(json, "$.trabajadoresPausados")).longValue(), List.of());
+                ((Number) JsonPath.read(json, "$.trabajadoresPausados")).longValue(), List.of(), List.of());
     }
 
     @Test
@@ -483,6 +483,29 @@ class AceptacionReputationTest {
         mvc.perform(get(BASE + "/estadisticas").param("desde", "2020-01-01").param("hasta", "2020-01-31")
                         .with(administrador()))
                 .andExpect(jsonPath("$.cumplidosPorTrabajador.length()").value(0));
+    }
+
+    @Test
+    void reportingVeLasPersonasConActividadPorDia() throws Exception {
+        // Mismo día (2026-10-20): dos servicios del mismo trabajador con dos contratantes distintos = 3 personas.
+        UUID otroContratante = nuevoId();
+        String dia = "2026-10-20";
+        String antes = mvc.perform(get(BASE + "/estadisticas").param("desde", dia).param("hasta", dia)
+                        .with(administrador()))
+                .andReturn().getResponse().getContentAsString();
+        long previas = JsonPath.<List<Integer>>read(antes, "$.usuariosConActividadPorDia[*].cantidad").stream()
+                .mapToLong(Integer::longValue).sum();
+        servicioCumplido(nuevoId(), trabajador, contratante).andExpect(status().isOk());
+        servicioCumplido(nuevoId(), trabajador, otroContratante).andExpect(status().isOk());
+
+        String json = mvc.perform(get(BASE + "/estadisticas").param("desde", dia).param("hasta", dia)
+                        .with(administrador()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.usuariosConActividadPorDia[0].fecha").value(dia))
+                .andReturn().getResponse().getContentAsString();
+        long ahora = JsonPath.<List<Integer>>read(json, "$.usuariosConActividadPorDia[*].cantidad").stream()
+                .mapToLong(Integer::longValue).sum();
+        assertThat(ahora).isEqualTo(previas + 3);
     }
 
     @Test

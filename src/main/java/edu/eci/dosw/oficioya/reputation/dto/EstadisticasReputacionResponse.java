@@ -1,8 +1,11 @@
 package edu.eci.dosw.oficioya.reputation.dto;
 
+import java.util.List;
+
 /**
  * Datos agregados de un periodo para Reporting (vía Orchestrator). Sin datos personales.
  * {@code trabajadoresPausados} es el estado actual (no depende del periodo): Worker no los lista porque están ocultos.
+ * {@code cumplidosPorTrabajador}: servicios cumplidos en el periodo por cuenta de trabajador.
  */
 public record EstadisticasReputacionResponse(
         long totalResenas,
@@ -10,5 +13,6 @@ public record EstadisticasReputacionResponse(
         long resenasReportadas,
         long reportesPendientes,
         long reportesResueltos,
-        long trabajadoresPausados) {
+        long trabajadoresPausados,
+        List<CumplidosTrabajadorResponse> cumplidosPorTrabajador) {
 }

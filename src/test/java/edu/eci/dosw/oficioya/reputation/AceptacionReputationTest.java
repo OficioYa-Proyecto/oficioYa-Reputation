@@ -1,5 +1,6 @@
 package edu.eci.dosw.oficioya.reputation;
 
+import java.util.List;
 import java.util.UUID;
 
 import static edu.eci.dosw.oficioya.reputation.IdsDePrueba.id;
@@ -467,7 +468,21 @@ class AceptacionReputationTest {
                 ((Number) JsonPath.read(json, "$.resenasReportadas")).longValue(),
                 ((Number) JsonPath.read(json, "$.reportesPendientes")).longValue(),
                 ((Number) JsonPath.read(json, "$.reportesResueltos")).longValue(),
-                ((Number) JsonPath.read(json, "$.trabajadoresPausados")).longValue());
+                ((Number) JsonPath.read(json, "$.trabajadoresPausados")).longValue(), List.of());
+    }
+
+    @Test
+    void reportingVeLosServiciosCumplidosDeCadaTrabajadorEnElPeriodo() throws Exception {
+        String dia = "2026-10-20";
+        servicioCumplido(nuevoId(), trabajador, contratante).andExpect(status().isOk());
+        servicioCumplido(nuevoId(), trabajador, contratante).andExpect(status().isOk());
+        mvc.perform(get(BASE + "/estadisticas").param("desde", dia).param("hasta", dia).with(administrador()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.cumplidosPorTrabajador[?(@.trabajadorId == '%s')].cantidad", trabajador)
+                        .value(2));
+        mvc.perform(get(BASE + "/estadisticas").param("desde", "2020-01-01").param("hasta", "2020-01-31")
+                        .with(administrador()))
+                .andExpect(jsonPath("$.cumplidosPorTrabajador.length()").value(0));
     }
 
     @Test

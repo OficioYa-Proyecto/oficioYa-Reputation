@@ -3,7 +3,11 @@ package edu.eci.dosw.oficioya.reputation.service;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeMap;
 import java.util.UUID;
 
 import org.springframework.stereotype.Service;
@@ -13,6 +17,8 @@ import edu.eci.dosw.oficioya.reputation.domain.EstadoReporte;
 import edu.eci.dosw.oficioya.reputation.domain.EstadoTrabajador;
 import edu.eci.dosw.oficioya.reputation.domain.ReglasReputacion;
 import edu.eci.dosw.oficioya.reputation.domain.Resena;
+import edu.eci.dosw.oficioya.reputation.domain.ServicioCalificable;
+import edu.eci.dosw.oficioya.reputation.dto.ActividadDiaResponse;
 import edu.eci.dosw.oficioya.reputation.dto.CumplidosTrabajadorResponse;
 import edu.eci.dosw.oficioya.reputation.dto.EstadisticasReputacionResponse;
 import edu.eci.dosw.oficioya.reputation.exception.SolicitudInvalidaException;
@@ -43,7 +49,7 @@ public class EstadisticasService {
 
     /**
      * Reseñas visibles y reportes creados entre las dos fechas (ambas inclusive), los trabajadores pausados hoy y
-     * los servicios cumplidos de cada trabajador en el periodo.
+     * los servicios cumplidos de cada trabajador y las personas con actividad por día en el periodo.
      */
     @Transactional(readOnly = true)
     public EstadisticasReputacionResponse calcular(LocalDate desde, LocalDate hasta) {
@@ -59,13 +65,30 @@ public class EstadisticasService {
         return new EstadisticasReputacionResponse(puntuaciones.size(), ReglasReputacion.promedio(puntuaciones),
                 reportados, reportados - resueltos, resueltos,
                 reputacionTrabajadorRepository.countByEstado(EstadoTrabajador.PAUSADO),
-                cumplidosPorTrabajador(inicio, fin));
+                cumplidosPorTrabajador(inicio, fin),
+                usuariosConActividadPorDia(inicio, fin));
     }
 
     private List<CumplidosTrabajadorResponse> cumplidosPorTrabajador(LocalDateTime inicio, LocalDateTime fin) {
         return servicioRepository.contarCumplidosEntre(inicio, fin).stream()
                 .map(fila -> new CumplidosTrabajadorResponse((UUID) fila[0], ((Number) fila[1]).longValue()))
                 .sorted(Comparator.comparingLong(CumplidosTrabajadorResponse::cantidad).reversed())
+                .toList();
+    }
+
+    /** Personas distintas por día: trabajador y contratante de cada servicio cumplido y autor de cada reseña. */
+    private List<ActividadDiaResponse> usuariosConActividadPorDia(LocalDateTime inicio, LocalDateTime fin) {
+        Map<LocalDate, Set<UUID>> porDia = new TreeMap<>();
+        for (ServicioCalificable servicio : servicioRepository.findByFechaCumplidaBetween(inicio, fin)) {
+            Set<UUID> personas = porDia.computeIfAbsent(servicio.getFechaCumplida().toLocalDate(), d -> new HashSet<>());
+            personas.add(servicio.getTrabajadorId());
+            personas.add(servicio.getContratanteId());
+        }
+        for (Resena resena : resenaRepository.findByFechaCreacionBetween(inicio, fin)) {
+            porDia.computeIfAbsent(resena.getFechaCreacion().toLocalDate(), d -> new HashSet<>()).add(resena.getAutorId());
+        }
+        return porDia.entrySet().stream()
+                .map(e -> new ActividadDiaResponse(e.getKey().toString(), e.getValue().size()))
                 .toList();
     }
 }

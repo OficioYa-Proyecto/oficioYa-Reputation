@@ -21,5 +21,7 @@ public interface ResenaRepository extends JpaRepository<Resena, Integer> {
     List<Resena> findByCalificadoIdAndTipoCalificadoAndVisibleTrueOrderByFechaCreacionDescIdDesc(
             UUID calificadoId, TipoParte tipoCalificado);
 
+    List<Resena> findByFechaCreacionBetween(LocalDateTime inicio, LocalDateTime fin);
+
     List<Resena> findByVisibleTrueAndFechaCreacionBetween(LocalDateTime inicio, LocalDateTime fin);
 }

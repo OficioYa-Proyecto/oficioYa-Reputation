@@ -264,9 +264,26 @@ class AceptacionReputationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(1))
                 .andExpect(jsonPath("$[0].trabajadorId").value(trabajador.toString()))
-                .andExpect(jsonPath("$[0].reputacion").value(5.0));
+                .andExpect(jsonPath("$[0].reputacion").value(5.0))
+                .andExpect(jsonPath("$[0].trabajosCompletados").value(1));
         mvc.perform(get(BASE + "/reputaciones").with(usuario(contratante, "ROLE_CONTRATANTE")))
                 .andExpect(jsonPath("$.length()").value(0));
+    }
+
+    @Test
+    void searchVeLosTrabajosCompletadosAunqueNoHayaResenas() throws Exception {
+        contratanteCalifica(4);
+        servicioCumplido(nuevoId(), trabajador, contratante).andExpect(status().isOk());
+        UUID sinResenas = nuevoId();
+        servicioCumplido(nuevoId(), sinResenas, contratante).andExpect(status().isOk());
+        mvc.perform(get(BASE + "/reputaciones").param("trabajadorIds", String.valueOf(trabajador),
+                                String.valueOf(sinResenas))
+                        .with(usuario(contratante, "ROLE_CONTRATANTE")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(2))
+                .andExpect(jsonPath("$[?(@.trabajadorId == '%s')].trabajosCompletados", trabajador).value(2))
+                .andExpect(jsonPath("$[?(@.trabajadorId == '%s')].trabajosCompletados", sinResenas).value(1))
+                .andExpect(jsonPath("$[?(@.trabajadorId == '%s')].totalResenas", sinResenas).value(0));
     }
 
     // ---------- RF-05: pausado automático ----------
